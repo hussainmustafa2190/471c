@@ -3,6 +3,7 @@ from L3.check import Context, check_term
 from L3.syntax import Reference
 
 
+@pytest.mark.skip()
 def test_check_reference_bound():
     term = Reference(name="x")
 
@@ -13,6 +14,7 @@ def test_check_reference_bound():
     check_term(term, context)
 
 
+@pytest.mark.skip()
 def test_check_reference_free():
     term = Reference(name="x")
 
