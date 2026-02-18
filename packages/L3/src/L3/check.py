@@ -2,80 +2,65 @@ from collections.abc import Mapping
 from functools import partial
 
 from .syntax import (
-    Abstract,
-    Allocate,
-    Apply,
-    Begin,
-    Branch,
-    Identifier,
-    Immediate,
-    Let,
-    LetRec,
-    Load,
-    Primitive,
-    Reference,
-    Store,
-    Term,
+    Abstract, Allocate, Apply, Begin, Branch, Identifier, 
+    Immediate, Let, LetRec, Load, Primitive, Reference, Store, Term,
 )
 
 type Context = Mapping[Identifier, None]
 
-
-def check_term(
-    term: Term,
-    context: Context,
-) -> None:
+def check_term(term: Term, context: Context) -> None:
     recur = partial(check_term, context=context)
 
     match term:
-        case Let(variable, value, body):
-            recur(value)
-            check_term(body, context | {variable: None})
+        case Let(bindings=bindings, body=body):
+            current_ctx = context
+            for var, val in bindings:
+                check_term(val, current_ctx) 
+                current_ctx = current_ctx | {var: None} 
+            check_term(body, current_ctx)
 
-        case LetRec(bindings, body):
+        case LetRec(bindings=bindings, body=body):
             new_context = context | {var: None for var, _ in bindings}
             for _, val in bindings:
                 check_term(val, new_context)
             check_term(body, new_context)
 
-        case Reference(identifier):
-            if identifier not in context:
-                raise NameError(f"Unbound identifier: {identifier}")
+        case Reference(name=name):
+            if name not in context:
+                raise NameError(f"Unbound identifier: {name}")
 
-        case Abstract(parameters, body):
-            new_context = context | {p: None for p in parameters}
-            check_term(body, new_context)
+        case Abstract(parameters=parameters, body=body):
+            check_term(body, context | {p: None for p in parameters})
 
-        case Apply(function, arguments):
-            recur(function)
+        case Apply(target=target, arguments=arguments):
+            recur(target)
             for arg in arguments:
                 recur(arg)
 
-        case Immediate():
+        case Immediate(value=value):
             pass
 
-        case Primitive(_, arguments):
-            for arg in arguments:
-                recur(arg)
+        case Primitive(operator=_, left=left, right=right):
+            recur(left)
+            recur(right)
 
-        case Branch(condition, then_term, else_term):
-            recur(condition)
-            recur(then_term)
-            recur(else_term)
+        case Branch(operator=_, left=left, right=right, consequent=consequent, otherwise=otherwise):
+            recur(left)
+            recur(right)
+            recur(consequent)
+            recur(otherwise)
 
-        case Allocate(items):
-            for item in items:
-                recur(item)
+        case Allocate(count=value):
+            pass
 
-        case Load(collection, index):
-            recur(collection)
-            recur(index)
+        case Load(base=base, index=_):
+            recur(base)
 
-        case Store(collection, index, value):
-            recur(collection)
-            recur(index)
+        case Store(base=base, index=_, value=value):
+            recur(base)
             recur(value)
 
-        case Begin(terms):
-            for t in terms:
-                recur(t)
+        case Begin(effects=effects, value=value):
+            for e in effects:
+                recur(e)
+            recur(value)
