@@ -41,7 +41,6 @@ def test_check_apply():
     check_term(term, {"f": None, "x": None})
 
 def test_check_branch():
-    # Fix: operator must be '==' or '<' per literal_error
     term = Branch(
         operator="==", 
         left=Immediate(value=1),
@@ -52,15 +51,18 @@ def test_check_branch():
     check_term(term, {})
 
 def test_check_primitive():
-    # Fix: operator must be '+', '-', or '*'
-    term = Primitive(operator="*", left=Immediate(value=1), right=Immediate(value=2))
+   
+    term = Primitive(operator="+", left=Immediate(value=1), right=Immediate(value=2))
     check_term(term, {})
+
+def test_check_apply_no_args():
+   
+    term = Apply(target=Reference(name="f"), arguments=[])
+    check_term(term, {"f": None})
 
 def test_check_memory_ops():
     ctx = {"p": None, "v": None}
     check_term(Allocate(count=1), ctx) 
-    
-    # Fix: use 'base' instead of 'collection'; 'index' must be int
     check_term(Load(base=Reference(name="p"), index=0), ctx)
     check_term(Store(base=Reference(name="p"), index=0, value=Reference(name="v")), ctx)
 
