@@ -25,41 +25,57 @@ def check_term(
     term: Term,
     context: Context,
 ) -> None:
-    recur = partial(check_term, context=context)  # noqa: F841
+    recur = partial(check_term, context=context)
 
     match term:
-        case Let():
-            pass
+        case Let(variable, value, body):
+            recur(value)
+            check_term(body, context | {variable: None})
 
-        case LetRec():
-            pass
+        case LetRec(bindings, body):
+            new_context = context | {var: None for var, _ in bindings}
+            for _, val in bindings:
+                check_term(val, new_context)
+            check_term(body, new_context)
 
-        case Reference():
-            pass
+        case Reference(identifier):
+            if identifier not in context:
+                raise NameError(f"Unbound identifier: {identifier}")
 
-        case Abstract():
-            pass
+        case Abstract(parameters, body):
+            new_context = context | {p: None for p in parameters}
+            check_term(body, new_context)
 
-        case Apply():
-            pass
+        case Apply(function, arguments):
+            recur(function)
+            for arg in arguments:
+                recur(arg)
 
         case Immediate():
             pass
 
-        case Primitive():
-            pass
+        case Primitive(_, arguments):
+            for arg in arguments:
+                recur(arg)
 
-        case Branch():
-            pass
+        case Branch(condition, then_term, else_term):
+            recur(condition)
+            recur(then_term)
+            recur(else_term)
 
-        case Allocate():
-            pass
+        case Allocate(items):
+            for item in items:
+                recur(item)
 
-        case Load():
-            pass
+        case Load(collection, index):
+            recur(collection)
+            recur(index)
 
-        case Store():
-            pass
+        case Store(collection, index, value):
+            recur(collection)
+            recur(index)
+            recur(value)
 
-        case Begin():  # pragma: no branch
-            pass
+        case Begin(terms):
+            for t in terms:
+                recur(t)
