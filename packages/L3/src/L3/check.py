@@ -1,9 +1,9 @@
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from functools import partial
 
 from .syntax import (
     Abstract, Allocate, Apply, Begin, Branch, Identifier, 
-    Immediate, Let, LetRec, Load, Primitive, Reference, Store, Term,
+    Immediate, Let, LetRec, Load, Primitive, Program, Reference, Store, Term,
 )
 
 type Context = Mapping[Identifier, None]
@@ -13,13 +13,18 @@ def check_term(term: Term, context: Context) -> None:
 
     match term:
         case Let(bindings=bindings, body=body):
-            current_ctx = context
-            for var, val in bindings:
-                check_term(val, current_ctx) 
-                current_ctx = current_ctx | {var: None} 
-            check_term(body, current_ctx)
+            binders = [b[0] for b in bindings]
+            if len(set(binders)) != len(binders):
+                raise ValueError("Duplicate binders in Let")
+            for _, val in bindings:
+                check_term(val, context)
+            check_term(body, context | {var: None for var, _ in bindings})
 
         case LetRec(bindings=bindings, body=body):
+            binders = [b[0] for b in bindings]
+            if len(set(binders)) != len(binders):
+                raise ValueError("Duplicate binders in LetRec")
+            
             new_context = context | {var: None for var, _ in bindings}
             for _, val in bindings:
                 check_term(val, new_context)
@@ -27,9 +32,11 @@ def check_term(term: Term, context: Context) -> None:
 
         case Reference(name=name):
             if name not in context:
-                raise NameError(f"Unbound identifier: {name}")
+                raise ValueError(f"Unbound identifier: {name}")
 
         case Abstract(parameters=parameters, body=body):
+            if len(set(parameters)) != len(parameters):
+                raise ValueError("Duplicate parameters in Abstract")
             check_term(body, context | {p: None for p in parameters})
 
         case Apply(target=target, arguments=arguments):
@@ -37,7 +44,7 @@ def check_term(term: Term, context: Context) -> None:
             for arg in arguments:
                 recur(arg)
 
-        case Immediate(value=value):
+        case Immediate():
             pass
 
         case Primitive(operator=_, left=left, right=right):
@@ -50,7 +57,7 @@ def check_term(term: Term, context: Context) -> None:
             recur(consequent)
             recur(otherwise)
 
-        case Allocate(count=value):
+        case Allocate(count=_):
             pass
 
         case Load(base=base, index=_):
@@ -64,3 +71,14 @@ def check_term(term: Term, context: Context) -> None:
             for e in effects:
                 recur(e)
             recur(value)
+        
+        case _:
+            raise ValueError(f"Unknown term: {type(term)}")
+
+def check_program(program: Program) -> None:
+    # Check for duplicate top-level parameters
+    if len(set(program.parameters)) != len(program.parameters):
+        raise ValueError("Duplicate parameters in program")
+    
+    context = {p: None for p in program.parameters}
+    check_term(program.body, context)
