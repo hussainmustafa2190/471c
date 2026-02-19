@@ -3,7 +3,7 @@ from L3.syntax import (
     Abstract, Allocate, Apply, Begin, Branch, 
     Immediate, Let, LetRec, Load, Primitive, Reference, Store
 )
-from L3.check import check_term, Context
+from L3.check import check_term
 
 def test_check_immediates():
     check_term(Immediate(value=42), {})
