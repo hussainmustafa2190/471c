@@ -1,13 +1,26 @@
-from collections import Counter
 from collections.abc import Mapping
 from functools import partial
 
 from .syntax import (
-    Abstract, Allocate, Apply, Begin, Branch, Identifier,
-    Immediate, Let, LetRec, Load, Primitive, Program, Reference, Store, Term,
+    Abstract,
+    Allocate,
+    Apply,
+    Begin,
+    Branch,
+    Identifier,
+    Immediate,
+    Let,
+    LetRec,
+    Load,
+    Primitive,
+    Program,
+    Reference,
+    Store,
+    Term,
 )
 
 type Context = Mapping[Identifier, None]
+
 
 def check_term(term: Term, context: Context) -> None:
     recur = partial(check_term, context=context)
@@ -75,6 +88,7 @@ def check_term(term: Term, context: Context) -> None:
 
         case _:
             raise ValueError(f"Unknown term: {type(term)}")
+
 
 def check_program(program: Program) -> None:
     if len(set(program.parameters)) != len(program.parameters):
