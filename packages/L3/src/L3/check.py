@@ -1,8 +1,9 @@
+from collections import Counter
 from collections.abc import Mapping
 from functools import partial
 
 from .syntax import (
-    Abstract, Allocate, Apply, Begin, Branch, Identifier, 
+    Abstract, Allocate, Apply, Begin, Branch, Identifier,
     Immediate, Let, LetRec, Load, Primitive, Program, Reference, Store, Term,
 )
 
@@ -24,7 +25,7 @@ def check_term(term: Term, context: Context) -> None:
             binders = [b[0] for b in bindings]
             if len(set(binders)) != len(binders):
                 raise ValueError("Duplicate binders in LetRec")
-            
+
             new_context = context | {var: None for var, _ in bindings}
             for _, val in bindings:
                 check_term(val, new_context)
@@ -44,9 +45,6 @@ def check_term(term: Term, context: Context) -> None:
             for arg in arguments:
                 recur(arg)
 
-        case Immediate():
-            pass
-
         case Primitive(operator=_, left=left, right=right):
             recur(left)
             recur(right)
@@ -56,6 +54,9 @@ def check_term(term: Term, context: Context) -> None:
             recur(right)
             recur(consequent)
             recur(otherwise)
+
+        case Immediate():
+            pass
 
         case Allocate(count=_):
             pass
@@ -71,14 +72,13 @@ def check_term(term: Term, context: Context) -> None:
             for e in effects:
                 recur(e)
             recur(value)
-        
+
         case _:
             raise ValueError(f"Unknown term: {type(term)}")
 
 def check_program(program: Program) -> None:
-    # Check for duplicate top-level parameters
     if len(set(program.parameters)) != len(program.parameters):
         raise ValueError("Duplicate parameters in program")
-    
+
     context = {p: None for p in program.parameters}
     check_term(program.body, context)

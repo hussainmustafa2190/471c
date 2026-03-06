@@ -11,25 +11,19 @@ type Nat = Annotated[int, Field(ge=0)]
 class Program(BaseModel, frozen=True):
     tag: Literal["l3"] = "l3"
     parameters: Sequence[Identifier]
-    body: Term
-
-
-type Term = Annotated[
-    Let | Reference | Abstract | Apply | Immediate | Primitive | Branch | Allocate | Load | Store | Begin | LetRec,
-    Field(discriminator="tag"),
-]
+    body: "Term"
 
 
 class Let(BaseModel, frozen=True):
     tag: Literal["let"] = "let"
-    bindings: Sequence[tuple[Identifier, Term]]
-    body: Term
+    bindings: Sequence[tuple[Identifier, "Term"]]
+    body: "Term"
 
 
 class LetRec(BaseModel, frozen=True):
     tag: Literal["letrec"] = "letrec"
-    bindings: Sequence[tuple[Identifier, Term]]
-    body: Term
+    bindings: Sequence[tuple[Identifier, "Term"]]
+    body: "Term"
 
 
 class Reference(BaseModel, frozen=True):
@@ -40,13 +34,13 @@ class Reference(BaseModel, frozen=True):
 class Abstract(BaseModel, frozen=True):
     tag: Literal["abstract"] = "abstract"
     parameters: Sequence[Identifier]
-    body: Term
+    body: "Term"
 
 
 class Apply(BaseModel, frozen=True):
     tag: Literal["apply"] = "apply"
-    target: Term
-    arguments: Sequence[Term]
+    target: "Term"
+    arguments: Sequence["Term"]
 
 
 class Immediate(BaseModel, frozen=True):
@@ -57,17 +51,17 @@ class Immediate(BaseModel, frozen=True):
 class Primitive(BaseModel, frozen=True):
     tag: Literal["primitive"] = "primitive"
     operator: Literal["+", "-", "*"]
-    left: Term
-    right: Term
+    left: "Term"
+    right: "Term"
 
 
 class Branch(BaseModel, frozen=True):
     tag: Literal["branch"] = "branch"
     operator: Literal["<", "=="]
-    left: Term
-    right: Term
-    consequent: Term
-    otherwise: Term
+    left: "Term"
+    right: "Term"
+    consequent: "Term"
+    otherwise: "Term"
 
 
 class Allocate(BaseModel, frozen=True):
@@ -77,18 +71,37 @@ class Allocate(BaseModel, frozen=True):
 
 class Load(BaseModel, frozen=True):
     tag: Literal["load"] = "load"
-    base: Term
+    base: "Term"
     index: Nat
 
 
 class Store(BaseModel, frozen=True):
     tag: Literal["store"] = "store"
-    base: Term
+    base: "Term"
     index: Nat
-    value: Term
+    value: "Term"
 
 
 class Begin(BaseModel, frozen=True):
     tag: Literal["begin"] = "begin"
-    effects: Sequence[Term]
-    value: Term
+    effects: Sequence["Term"]
+    value: "Term"
+
+
+type Term = Annotated[
+    Let | Reference | Abstract | Apply | Immediate | Primitive | Branch | Allocate | Load | Store | Begin | LetRec,
+    Field(discriminator="tag"),
+]
+
+
+# Resolve forward references now that Term and all classes are fully defined.
+Program.model_rebuild()
+Let.model_rebuild()
+LetRec.model_rebuild()
+Abstract.model_rebuild()
+Apply.model_rebuild()
+Primitive.model_rebuild()
+Branch.model_rebuild()
+Load.model_rebuild()
+Store.model_rebuild()
+Begin.model_rebuild()

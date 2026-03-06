@@ -1,0 +1,66 @@
+program    : "(" "l3" "(" parameters ")" term ")"
+parameters : IDENTIFIER*
+
+term       : let
+           | letrec
+           | reference
+           | abstract
+           | apply
+           | immediate
+           | primitive
+           | branch
+           | allocate
+           | load
+           | store
+           | begin
+
+
+let      : "(" "let"    "(" bindings ")" term ")"
+letrec   : "(" "letrec" "(" bindings ")" term ")"
+
+bindings : binding*
+binding  : "(" IDENTIFIER term ")"
+
+
+// e.g.  x
+reference : IDENTIFIER
+
+// e.g.  (\ (x y) body)  |  (lambda (x y) body)
+abstract  : "(" LAMBDA "(" parameters ")" term ")"
+
+// e.g.  (f x y)  or  (loop)
+apply     : "(" term term* ")"
+
+// e.g.  42  or  -7
+immediate : INTEGER
+
+// e.g.  (+ m n)
+primitive : "(" OPERATOR term term ")"
+
+// e.g.  (if (< a b) consequent otherwise)
+branch    : "(" "if" "(" COMPARATOR term term ")" term term ")"
+
+// e.g.  (allocate 1)
+allocate  : "(" "allocate" INTEGER ")"
+
+// e.g.  (load i 0)
+load      : "(" "load" term INTEGER ")"
+
+// e.g.  (store i 0 42)
+store     : "(" "store" term INTEGER term ")"
+
+// e.g.  (begin effect1 effect2 value)
+begin     : "(" "begin" term+ ")"
+
+
+
+LAMBDA.2    : "\\" | "lambda"
+OPERATOR    : "+" | "-" | "*"
+COMPARATOR  : "<" | "=="
+IDENTIFIER  : /[a-zA-Z_][a-zA-Z0-9_]*/
+INTEGER     : /-?(?:0|[1-9][0-9]*)/
+
+
+%import common.WS
+%ignore WS
+%ignore /;[^\n]*/

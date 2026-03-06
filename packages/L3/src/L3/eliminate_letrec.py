@@ -37,14 +37,11 @@ def _subst(term: Term, names: frozenset[Identifier]) -> Term:
             return term
 
         case Let(bindings=bindings, body=body):
-            # In L3, Let values are evaluated in the outer context (not sequential).
             new_bindings = [(n, _subst(val, names)) for n, val in bindings]
-            # Binders shadow the substituted names in the body.
             shadowed = names - {n for n, _ in bindings}
             return Let(bindings=new_bindings, body=_subst(body, shadowed))
 
         case LetRec(bindings=bindings, body=body):
-            # Inner binders shadow outer names for both values and body.
             shadowed = names - {n for n, _ in bindings}
             new_bindings = [(n, _subst(val, shadowed)) for n, val in bindings]
             return LetRec(bindings=new_bindings, body=_subst(body, shadowed))
