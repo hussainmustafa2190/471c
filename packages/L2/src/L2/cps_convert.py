@@ -16,37 +16,126 @@ def cps_convert_term(
 
     match term:
         case L2.Let(bindings=bindings, body=body):
-            pass
+            # Each binding (name, val) becomes a Copy/assignment in L1.
+            # We evaluate each binding value, copy the result into `name`,
+            # then continue with the remaining bindings and finally the body.
+            def convert_bindings(
+                remaining: list[tuple[L2.Identifier, L2.Term]],
+            ) -> L1.Statement:
+                if not remaining:
+                    return _term(body, k)
+                (name, val), *rest = remaining
+                return _term(val, lambda src: L1.Copy(
+                    destination=name,
+                    source=src,
+                    then=convert_bindings(rest),
+                ))
+
+            return convert_bindings(list(bindings))
 
         case L2.Reference(name=name):
-            pass
+            # A variable reference — just pass the name straight to k
+            return k(name)
 
         case L2.Abstract(parameters=parameters, body=body):
-            pass
+            # A lambda becomes an L1.Abstract (a named function definition).
+            # We add a continuation parameter "k..." to the parameter list.
+            # Inside the body, instead of returning normally we call that k.
+            k_name = fresh("k")
+            dest = fresh("t")
+            return L1.Abstract(
+                destination=dest,
+                parameters=[*parameters, k_name],
+                body=_term(body, lambda result: L1.Apply(
+                    target=k_name,
+                    arguments=[result],
+                )),
+                then=k(dest),
+            )
 
         case L2.Apply(target=target, arguments=arguments):
-            pass
+            # To call a CPS function we must first build a continuation closure
+            # that captures "what to do with the return value", pass it as an
+            # extra argument, then tail-call the function.
+            k_name = fresh("k")
+            result = fresh("t")
+            return _terms([target, *arguments], lambda vals: L1.Abstract(
+                destination=k_name,
+                parameters=[result],
+                body=k(result),
+                then=L1.Apply(
+                    target=vals[0],
+                    arguments=[*vals[1:], k_name],
+                ),
+            ))
 
         case L2.Immediate(value=value):
-            pass
+            dest = fresh("t")
+            return L1.Immediate(destination=dest, value=value, then=k(dest))
 
         case L2.Primitive(operator=operator, left=left, right=right):
-            pass
+            # Evaluate both operands, then emit the operation
+            dest = fresh("t")
+            return _terms([left, right], lambda vals: L1.Primitive(
+                destination=dest,
+                operator=operator,
+                left=vals[0],
+                right=vals[1],
+                then=k(dest),
+            ))
 
         case L2.Branch(operator=operator, left=left, right=right, consequent=consequent, otherwise=otherwise):
-            pass
+            # Create a join-point continuation so both branches converge
+            # to the same "rest of the program".
+            j_name = fresh("j")
+            result = fresh("t")
+            return _terms([left, right], lambda vals: L1.Abstract(
+                destination=j_name,
+                parameters=[result],
+                body=k(result),
+                then=L1.Branch(
+                    operator=operator,
+                    left=vals[0],
+                    right=vals[1],
+                    then=_term(consequent, lambda v: L1.Apply(target=j_name, arguments=[v])),
+                    otherwise=_term(otherwise, lambda v: L1.Apply(target=j_name, arguments=[v])),
+                ),
+            ))
 
         case L2.Allocate(count=count):
-            pass
+            dest = fresh("t")
+            return L1.Allocate(destination=dest, count=count, then=k(dest))
 
         case L2.Load(base=base, index=index):
-            pass
+            dest = fresh("t")
+            return _term(base, lambda b: L1.Load(
+                destination=dest,
+                base=b,
+                index=index,
+                then=k(dest),
+            ))
 
         case L2.Store(base=base, index=index, value=value):
-            pass
+            # Store has no meaningful return value — emit a dummy Immediate(0)
+            # after the store so k has something to receive.
+            dummy = fresh("t")
+            return _terms([base, value], lambda vals: L1.Store(
+                base=vals[0],
+                index=index,
+                value=vals[1],
+                then=L1.Immediate(destination=dummy, value=0, then=k(dummy)),
+            ))
 
         case L2.Begin(effects=effects, value=value):  # pragma: no branch
-            pass
+            # Effects are evaluated for side effects only — their results are
+            # discarded.  The value of the Begin is the last term.
+            def convert_effects(remaining: list[L2.Term]) -> L1.Statement:
+                if not remaining:
+                    return _term(value, k)
+                first, *rest = remaining
+                return _term(first, lambda _: convert_effects(rest))
+
+            return convert_effects(list(effects))
 
 
 def cps_convert_terms(
