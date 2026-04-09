@@ -33,7 +33,8 @@ class ConstantPropagation:
     # ------------------------------------------------------------------
 
     def _subst(self, term: Term, name: Identifier, replacement: Term) -> Term:
-        recur = lambda t: self._subst(t, name, replacement)
+        def recur(t: Term) -> Term:
+            return self._subst(t, name, replacement)
 
         match term:
             case Reference(name=n) if n == name:

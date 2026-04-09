@@ -15,7 +15,6 @@ Coverage targets:
   optimize_program                 — loop runs to stability, existing test case
 """
 
-import pytest
 
 from L2.optimize import ConstantPropagation, DeadCodeElimination, optimize_program
 from L2.syntax import (
