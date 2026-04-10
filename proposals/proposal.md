@@ -1,6 +1,6 @@
 # L3 Compiler Extension Proposal
 
-**Course:** CISC 471/671  
+**Course:** 671  
 **Date:** April 2026  
 **Submission:** Graduate Student, Individual  
 
