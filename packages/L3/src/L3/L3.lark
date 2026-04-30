@@ -13,6 +13,14 @@ term       : let
            | load
            | store
            | begin
+           | tuple_term
+           | tuple_ref_term
+           | cons_term
+           | nil_term
+           | car_term
+           | cdr_term
+           | is_nil_term
+           | list_term
 
 
 let      : "(" "let"    "(" bindings ")" term ")"
@@ -52,11 +60,27 @@ store     : "(" "store" term INTEGER term ")"
 // e.g.  (begin effect1 effect2 value)
 begin     : "(" "begin" term+ ")"
 
+// Tuples (TUPLE_REF must lex before TUPLE prefix of "tuple-ref")
+tuple_term     : "(" TUPLE term* ")"
+tuple_ref_term : "(" TUPLE_REF term INTEGER ")"
+
+// Lists
+cons_term   : "(" "cons" term term ")"
+nil_term    : NIL
+car_term    : "(" "car" term ")"
+cdr_term    : "(" "cdr" term ")"
+is_nil_term : "(" NULLP term ")"
+list_term   : "(" "list" term* ")"
+
 
 
 LAMBDA.2    : "\\" | "lambda"
 OPERATOR    : "+" | "-" | "*"
 COMPARATOR  : "<" | "=="
+TUPLE_REF.3 : "tuple-ref"
+TUPLE.2     : "tuple"
+NIL.2       : "nil"
+NULLP.2     : "null?"
 IDENTIFIER  : /[a-zA-Z_][a-zA-Z0-9_]*/
 INTEGER     : /-?(?:0|[1-9][0-9]*)/
 

@@ -10,19 +10,48 @@ from .syntax import (
     Apply,
     Begin,
     Branch,
+    Car,
+    Cdr,
+    Cons,
     Identifier,
     Immediate,
+    IsNil,
     Let,
     LetRec,
+    ListLiteral,
     Load,
+    Nil,
     Primitive,
     Program,
     Reference,
     Store,
     Term,
+    Tuple,
+    TupleRef,
 )
 
-_TERM_TYPES = (Let, LetRec, Reference, Abstract, Apply, Immediate, Primitive, Branch, Allocate, Load, Store, Begin)
+_TERM_TYPES = (
+    Let,
+    LetRec,
+    Reference,
+    Abstract,
+    Apply,
+    Immediate,
+    Primitive,
+    Branch,
+    Allocate,
+    Load,
+    Store,
+    Begin,
+    Tuple,
+    TupleRef,
+    Cons,
+    Nil,
+    Car,
+    Cdr,
+    IsNil,
+    ListLiteral,
+)
 
 
 class AstTransformer(Transformer[Token, Program | Term]):
@@ -167,6 +196,66 @@ class AstTransformer(Transformer[Token, Program | Term]):
         children: list[Term],
     ) -> Term:
         return Begin(effects=children[:-1], value=children[-1])
+
+    def tuple_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        elements = [c for c in children if isinstance(c, _TERM_TYPES)]
+        return Tuple(elements=elements)
+
+    @v_args(inline=True)
+    def tuple_ref_term(
+        self,
+        _tuple_ref: Token,
+        base: Term,
+        index: Token,
+    ) -> Term:
+        return TupleRef(base=base, index=int(index))
+
+    @v_args(inline=True)
+    def cons_term(
+        self,
+        head: Term,
+        tail: Term,
+    ) -> Term:
+        return Cons(head=head, tail=tail)
+
+    @v_args(inline=True)
+    def nil_term(
+        self,
+        _nil: Token,
+    ) -> Term:
+        return Nil()
+
+    @v_args(inline=True)
+    def car_term(
+        self,
+        base: Term,
+    ) -> Term:
+        return Car(base=base)
+
+    @v_args(inline=True)
+    def cdr_term(
+        self,
+        base: Term,
+    ) -> Term:
+        return Cdr(base=base)
+
+    @v_args(inline=True)
+    def is_nil_term(
+        self,
+        _nullp: Token,
+        base: Term,
+    ) -> Term:
+        return IsNil(base=base)
+
+    def list_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        elements = [c for c in children if isinstance(c, _TERM_TYPES)]
+        return ListLiteral(elements=elements)
 
 
 def parse_term(source: str) -> Term:

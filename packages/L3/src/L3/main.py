@@ -6,6 +6,7 @@ from L2.cps_convert import cps_convert_program
 from L2.optimize import optimize_program
 
 from .check import check_program
+from .desugar import desugar_program
 from .eliminate_letrec import eliminate_letrec_program
 from .parse import parse_program
 from .uniqify import uniqify_program
@@ -47,6 +48,7 @@ def main(
     input: Path,
 ) -> None:
     l3 = parse_program(input.read_text())
+    l3 = desugar_program(l3)
 
     if check:
         check_program(l3)

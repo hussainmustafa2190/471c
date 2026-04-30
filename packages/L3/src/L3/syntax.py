@@ -88,8 +88,68 @@ class Begin(BaseModel, frozen=True):
     value: "Term"
 
 
+class Tuple(BaseModel, frozen=True):
+    tag: Literal["tuple"] = "tuple"
+    elements: Sequence["Term"]
+
+
+class TupleRef(BaseModel, frozen=True):
+    tag: Literal["tuple-ref"] = "tuple-ref"
+    base: "Term"
+    index: Nat
+
+
+class Cons(BaseModel, frozen=True):
+    tag: Literal["cons"] = "cons"
+    head: "Term"
+    tail: "Term"
+
+
+class Nil(BaseModel, frozen=True):
+    tag: Literal["nil"] = "nil"
+
+
+class Car(BaseModel, frozen=True):
+    tag: Literal["car"] = "car"
+    base: "Term"
+
+
+class Cdr(BaseModel, frozen=True):
+    tag: Literal["cdr"] = "cdr"
+    base: "Term"
+
+
+class IsNil(BaseModel, frozen=True):
+    tag: Literal["is-nil"] = "is-nil"
+    base: "Term"
+
+
+class ListLiteral(BaseModel, frozen=True):
+    tag: Literal["list"] = "list"
+    elements: Sequence["Term"]
+
+
 type Term = Annotated[
-    Let | Reference | Abstract | Apply | Immediate | Primitive | Branch | Allocate | Load | Store | Begin | LetRec,
+    Let
+    | LetRec
+    | Reference
+    | Abstract
+    | Apply
+    | Immediate
+    | Primitive
+    | Branch
+    | Allocate
+    | Load
+    | Store
+    | Begin
+    | Tuple
+    | TupleRef
+    | Cons
+    | Nil
+    | Car
+    | Cdr
+    | IsNil
+    | ListLiteral,
     Field(discriminator="tag"),
 ]
 
@@ -105,3 +165,11 @@ Branch.model_rebuild()
 Load.model_rebuild()
 Store.model_rebuild()
 Begin.model_rebuild()
+Tuple.model_rebuild()
+TupleRef.model_rebuild()
+Cons.model_rebuild()
+Nil.model_rebuild()
+Car.model_rebuild()
+Cdr.model_rebuild()
+IsNil.model_rebuild()
+ListLiteral.model_rebuild()

@@ -6,14 +6,22 @@ from L3.syntax import (
     Apply,
     Begin,
     Branch,
+    Car,
+    Cdr,
+    Cons,
     Immediate,
+    IsNil,
     Let,
     LetRec,
+    ListLiteral,
     Load,
+    Nil,
     Primitive,
     Program,
     Reference,
     Store,
+    Tuple,
+    TupleRef,
 )
 
 # ── parse_program ─────────────────────────────────────────────────────────────
@@ -297,6 +305,38 @@ def test_parse_program_sum():
     assert len(result.body.bindings) == 2
     assert result.body.bindings[0][0] == "i"
     assert result.body.bindings[1][0] == "acc"
+
+
+# ── tuple / list sugar ────────────────────────────────────────────────────────
+
+
+def test_parse_tuple_empty_and_nonempty() -> None:
+    assert parse_term("(tuple)") == Tuple(elements=[])
+    assert parse_term("(tuple 1 2)") == Tuple(
+        elements=[Immediate(value=1), Immediate(value=2)],
+    )
+
+
+def test_parse_tuple_ref() -> None:
+    assert parse_term("(tuple-ref x 2)") == TupleRef(base=Reference(name="x"), index=2)
+
+
+def test_parse_cons_and_nil() -> None:
+    assert parse_term("(cons 1 nil)") == Cons(head=Immediate(value=1), tail=Nil())
+    assert parse_term("nil") == Nil()
+
+
+def test_parse_car_cdr_is_nil() -> None:
+    assert parse_term("(car p)") == Car(base=Reference(name="p"))
+    assert parse_term("(cdr p)") == Cdr(base=Reference(name="p"))
+    assert parse_term("(null? p)") == IsNil(base=Reference(name="p"))
+
+
+def test_parse_list_literal() -> None:
+    assert parse_term("(list)") == ListLiteral(elements=[])
+    assert parse_term("(list 1 2)") == ListLiteral(
+        elements=[Immediate(value=1), Immediate(value=2)],
+    )
 
 
 # ── syntax errors ─────────────────────────────────────────────────────────────
