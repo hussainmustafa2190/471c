@@ -3,6 +3,20 @@ parameters : IDENTIFIER*
 
 term       : let
            | letrec
+           | true_term
+           | false_term
+           | and_term
+           | or_term
+           | not_term
+           | cond_term
+           | div_term
+           | mod_term
+           | lt_term
+           | gt_term
+           | gte_term
+           | lte_term
+           | neq_term
+           | match_term
            | reference
            | abstract
            | apply
@@ -72,11 +86,66 @@ cdr_term    : "(" "cdr" term ")"
 is_nil_term : "(" NULLP term ")"
 list_term   : "(" "list" term* ")"
 
+// Booleans and Major 1 sugar (keyword terminals must lex before IDENTIFIER uses)
+true_term   : TRUE
+false_term  : FALSE
+and_term    : "(" AND term term ")"
+or_term     : "(" OR term term ")"
+not_term    : "(" NOTKW term ")"
+cond_term   : "(" COND cond_clauses ")"
+cond_clauses: (cond_clause_normal | cond_clause_else)+
+cond_clause_normal: "(" term term ")"
+cond_clause_else  : "(" ELSE term ")"
+
+div_term    : "(" SLASH term term ")"
+mod_term    : "(" PCT term term ")"
+lt_term     : "(" LESS term term ")"
+gt_term     : "(" GT term term ")"
+gte_term    : "(" GTE term term ")"
+lte_term    : "(" LTE term term ")"
+neq_term    : "(" NEQ term term ")"
+
+// Major 2: pattern matching (tuple-pattern uses PATNAME so "(tuple a b)" is not tuple_term)
+match_term   : "(" MATCH term match_clause+ ")"
+match_clause : "(" pattern term ")"
+
+pattern            : int_pattern
+                   | bool_pattern
+                   | nil_pattern
+                   | cons_pattern
+                   | tuple_pattern
+                   | wildcard_pattern
+                   | name_pattern
+int_pattern        : INTEGER
+bool_pattern       : TRUE | FALSE
+nil_pattern        : NIL
+cons_pattern       : "(" "cons" PATNAME PATNAME ")"
+tuple_pattern      : "(" "tuple" PATNAME* ")"
+wildcard_pattern   : WILDCARD
+name_pattern       : PATNAME
 
 
 LAMBDA.2    : "\\" | "lambda"
 OPERATOR    : "+" | "-" | "*"
-COMPARATOR  : "<" | "=="
+COMPARATOR  : LESS | EQEQ
+MATCH.2     : "match"
+TRUE.2      : "true"
+FALSE.2     : "false"
+AND.2       : "and"
+OR.2        : "or"
+NOTKW.2     : "not"
+ELSE.2      : "else"
+COND.2      : "cond"
+SLASH.2     : "/"
+PCT.2       : "%"
+LESS.2      : "<"
+EQEQ.2      : "=="
+GTE.3       : ">="
+LTE.3       : "<="
+NEQ.2       : "!="
+GT.2        : ">"
+WILDCARD.2  : "_"
+PATNAME     : /[a-zA-Z][a-zA-Z0-9_]*/
 TUPLE_REF.3 : "tuple-ref"
 TUPLE.2     : "tuple"
 NIL.2       : "nil"

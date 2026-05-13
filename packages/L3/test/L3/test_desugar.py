@@ -6,25 +6,45 @@ from L3.desugar import desugar_program, desugar_term
 from L3.syntax import (
     Abstract,
     Allocate,
+    And,
     Apply,
     Begin,
+    BoolLiteral,
+    BoolPattern,
     Branch,
     Car,
     Cdr,
+    Cond,
     Cons,
+    ConsPattern,
+    Div,
+    GreaterThan,
+    GreaterThanOrEqual,
     Immediate,
+    IntPattern,
     IsNil,
+    LessThan,
     Let,
     LetRec,
+    LessThanOrEqual,
     ListLiteral,
     Load,
+    Match,
+    Mod,
+    NamePattern,
     Nil,
+    NilPattern,
+    Not,
+    NotEqual,
+    Or,
     Primitive,
     Program,
     Reference,
     Store,
     Tuple,
+    TuplePattern,
     TupleRef,
+    WildcardPattern,
 )
 
 
@@ -318,3 +338,405 @@ def test_list_literal_two_elements_uses_list_tail_not_nil_only() -> None:
     out = desugar_term(ListLiteral(elements=[Immediate(value=1), Immediate(value=2)]), gen)
     assert out.tag == "let"
     assert out.body.effects[1].value.tag == "let"
+
+
+def test_bool_literal_true_desugars_to_immediate_one() -> None:
+    assert desugar_term(BoolLiteral(value=True), _fresh()) == Immediate(value=1)
+
+
+def test_bool_literal_false_desugars_to_immediate_zero() -> None:
+    assert desugar_term(BoolLiteral(value=False), _fresh()) == Immediate(value=0)
+
+
+def test_not_zero_desugars_to_branch_equals_zero() -> None:
+    assert desugar_term(Not(operand=Immediate(value=0)), _fresh()) == Branch(
+        operator="==",
+        left=Immediate(value=0),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_not_one_desugars_to_branch_equals_zero() -> None:
+    assert desugar_term(Not(operand=Immediate(value=1)), _fresh()) == Branch(
+        operator="==",
+        left=Immediate(value=1),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_and_short_circuit_desugar() -> None:
+    assert desugar_term(
+        And(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="!=",
+        left=Reference(name="a"),
+        right=Immediate(value=0),
+        consequent=Branch(
+            operator="!=",
+            left=Reference(name="b"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=1),
+            otherwise=Immediate(value=0),
+        ),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_or_short_circuit_desugar() -> None:
+    assert desugar_term(
+        Or(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="!=",
+        left=Reference(name="a"),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Branch(
+            operator="!=",
+            left=Reference(name="b"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=1),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_cond_one_clause_and_else() -> None:
+    assert desugar_term(
+        Cond(
+            clauses=[
+                (Reference(name="x"), Immediate(value=1)),
+                (None, Immediate(value=0)),
+            ],
+        ),
+        _fresh(),
+    ) == Branch(
+        operator="!=",
+        left=Reference(name="x"),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_cond_multiple_clauses_and_else() -> None:
+    assert desugar_term(
+        Cond(
+            clauses=[
+                (Reference(name="x"), Immediate(value=1)),
+                (Reference(name="y"), Immediate(value=2)),
+                (None, Immediate(value=3)),
+            ],
+        ),
+        _fresh(),
+    ) == Branch(
+        operator="!=",
+        left=Reference(name="x"),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Branch(
+            operator="!=",
+            left=Reference(name="y"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=2),
+            otherwise=Immediate(value=3),
+        ),
+    )
+
+
+def test_cond_no_else_fallback_zero() -> None:
+    assert desugar_term(
+        Cond(clauses=[(Reference(name="x"), Immediate(value=1))]),
+        _fresh(),
+    ) == Branch(
+        operator="!=",
+        left=Reference(name="x"),
+        right=Immediate(value=0),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_cond_empty_clauses_desugar_to_zero() -> None:
+    assert desugar_term(Cond(clauses=[]), _fresh()) == Immediate(value=0)
+
+
+def test_cond_else_only_clause() -> None:
+    assert desugar_term(Cond(clauses=[(None, Immediate(value=42))]), _fresh()) == Immediate(value=42)
+
+
+def test_div_desugars_to_primitive_div() -> None:
+    assert desugar_term(
+        Div(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Primitive(operator="/", left=Reference(name="a"), right=Reference(name="b"))
+
+
+def test_mod_desugars_to_primitive_mod() -> None:
+    assert desugar_term(
+        Mod(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Primitive(operator="%", left=Reference(name="a"), right=Reference(name="b"))
+
+
+def test_greater_than_desugar() -> None:
+    assert desugar_term(
+        GreaterThan(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="<",
+        left=Reference(name="b"),
+        right=Reference(name="a"),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_greater_than_or_equal_desugar() -> None:
+    assert desugar_term(
+        GreaterThanOrEqual(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="<",
+        left=Reference(name="a"),
+        right=Reference(name="b"),
+        consequent=Immediate(value=0),
+        otherwise=Immediate(value=1),
+    )
+
+
+def test_less_than_or_equal_desugar() -> None:
+    assert desugar_term(
+        LessThanOrEqual(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="<",
+        left=Reference(name="b"),
+        right=Reference(name="a"),
+        consequent=Immediate(value=0),
+        otherwise=Immediate(value=1),
+    )
+
+
+def test_less_than_desugars_to_branch_lt() -> None:
+    assert desugar_term(
+        LessThan(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="<",
+        left=Reference(name="a"),
+        right=Reference(name="b"),
+        consequent=Immediate(value=1),
+        otherwise=Immediate(value=0),
+    )
+
+
+def test_not_equal_desugar() -> None:
+    assert desugar_term(
+        NotEqual(left=Reference(name="a"), right=Reference(name="b")),
+        _fresh(),
+    ) == Branch(
+        operator="==",
+        left=Reference(name="a"),
+        right=Reference(name="b"),
+        consequent=Immediate(value=0),
+        otherwise=Immediate(value=1),
+    )
+
+
+def test_match_int_pattern_binds_scrutinee() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Immediate(value=5),
+            clauses=[(IntPattern(value=7), Immediate(value=1))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Immediate(value=5))],
+        body=Branch(
+            operator="==",
+            left=Reference(name="s0"),
+            right=Immediate(value=7),
+            consequent=Immediate(value=1),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_match_bool_pattern_true() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(BoolPattern(value=True), Immediate(value=1))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Branch(
+            operator="!=",
+            left=Reference(name="s0"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=1),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_match_bool_pattern_false() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(BoolPattern(value=False), Immediate(value=0))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Branch(
+            operator="==",
+            left=Reference(name="s0"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=0),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_match_nil_pattern() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(NilPattern(), Immediate(value=0))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Branch(
+            operator="==",
+            left=Reference(name="s0"),
+            right=Immediate(value=0),
+            consequent=Immediate(value=0),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_match_cons_pattern() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(ConsPattern(head="h", tail="t"), Reference(name="h"))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Branch(
+            operator="!=",
+            left=Reference(name="s0"),
+            right=Immediate(value=0),
+            consequent=Let(
+                bindings=[
+                    ("h", Load(base=Reference(name="s0"), index=0)),
+                    ("t", Load(base=Reference(name="s0"), index=1)),
+                ],
+                body=Reference(name="h"),
+            ),
+            otherwise=Immediate(value=0),
+        ),
+    )
+
+
+def test_match_tuple_pattern() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(TuplePattern(elements=["a", "b"]), Reference(name="a"))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Let(
+            bindings=[
+                ("a", Load(base=Reference(name="s0"), index=0)),
+                ("b", Load(base=Reference(name="s0"), index=1)),
+            ],
+            body=Reference(name="a"),
+        ),
+    )
+
+
+def test_match_wildcard_pattern() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(WildcardPattern(), Immediate(value=42))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Immediate(value=42),
+    )
+
+
+def test_match_name_pattern() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[(NamePattern(name="n"), Reference(name="n"))],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Let(
+            bindings=[("n", Reference(name="s0"))],
+            body=Reference(name="n"),
+        ),
+    )
+
+
+def test_match_empty_clauses() -> None:
+    assert desugar_term(Match(scrutinee=Immediate(value=1), clauses=[]), _fresh()) == Immediate(value=0)
+
+
+def test_match_multiple_clauses_chain() -> None:
+    gen = _fresh()
+    out = desugar_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[
+                (IntPattern(value=1), Immediate(value=10)),
+                (WildcardPattern(), Immediate(value=20)),
+            ],
+        ),
+        gen,
+    )
+    assert out == Let(
+        bindings=[("s0", Reference(name="x"))],
+        body=Branch(
+            operator="==",
+            left=Reference(name="s0"),
+            right=Immediate(value=1),
+            consequent=Immediate(value=10),
+            otherwise=Immediate(value=20),
+        ),
+    )

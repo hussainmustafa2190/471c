@@ -3,17 +3,45 @@ from L3.check import check_program, check_term
 from L3.syntax import (
     Abstract,
     Allocate,
+    And,
     Apply,
     Begin,
+    BoolLiteral,
+    BoolPattern,
     Branch,
+    Car,
+    Cdr,
+    Cond,
+    Cons,
+    ConsPattern,
+    Div,
+    GreaterThan,
+    GreaterThanOrEqual,
     Immediate,
+    IntPattern,
+    IsNil,
     Let,
     LetRec,
+    LessThan,
+    LessThanOrEqual,
+    ListLiteral,
     Load,
+    Match,
+    Mod,
+    NamePattern,
+    Nil,
+    NilPattern,
+    Not,
+    NotEqual,
+    Or,
     Primitive,
     Program,
     Reference,
     Store,
+    Tuple,
+    TuplePattern,
+    TupleRef,
+    WildcardPattern,
 )
 
 
@@ -154,6 +182,54 @@ def test_coverage_gap_fillers():
     check_term(Abstract(parameters=[], body=Immediate(value=0)), {})
     check_term(Apply(target=Immediate(value=0), arguments=[]), {})
     check_term(Begin(effects=[], value=Immediate(value=0)), {})
+
+
+def test_check_major1_and_major2_surface_forms() -> None:
+    ctx = {"x": None, "y": None, "t": None}
+    check_term(BoolLiteral(value=True), ctx)
+    check_term(Nil(), ctx)
+    check_term(And(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(Or(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(Not(operand=Reference(name="x")), ctx)
+    check_term(
+        Cond(
+            clauses=[
+                (Reference(name="x"), Immediate(value=1)),
+                (None, Immediate(value=0)),
+            ],
+        ),
+        ctx,
+    )
+    check_term(Div(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(Mod(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(LessThan(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(GreaterThan(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(GreaterThanOrEqual(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(LessThanOrEqual(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(NotEqual(left=Reference(name="x"), right=Reference(name="y")), ctx)
+    check_term(Tuple(elements=[Reference(name="x")]), ctx)
+    check_term(TupleRef(base=Reference(name="t"), index=0), ctx)
+    check_term(Cons(head=Reference(name="x"), tail=Reference(name="y")), ctx)
+    check_term(Car(base=Reference(name="x")), ctx)
+    check_term(Cdr(base=Reference(name="x")), ctx)
+    check_term(IsNil(base=Reference(name="x")), ctx)
+    check_term(ListLiteral(elements=[Immediate(value=0)]), ctx)
+    check_term(
+        Match(
+            scrutinee=Reference(name="x"),
+            clauses=[
+                (IntPattern(value=0), Immediate(value=0)),
+                (BoolPattern(value=True), Immediate(value=1)),
+                (BoolPattern(value=False), Immediate(value=0)),
+                (NilPattern(), Immediate(value=0)),
+                (WildcardPattern(), Immediate(value=0)),
+                (ConsPattern(head="h", tail="tail"), Reference(name="h")),
+                (TuplePattern(elements=["a", "b"]), Reference(name="a")),
+                (NamePattern(name="n"), Reference(name="n")),
+            ],
+        ),
+        ctx,
+    )
 
 
 def test_coverage_unknown_term():

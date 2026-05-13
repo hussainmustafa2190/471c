@@ -3,25 +3,45 @@ from L3.parse import parse_program, parse_term
 from L3.syntax import (
     Abstract,
     Allocate,
+    And,
     Apply,
     Begin,
+    BoolLiteral,
+    BoolPattern,
     Branch,
     Car,
     Cdr,
+    Cond,
     Cons,
+    ConsPattern,
+    Div,
+    GreaterThan,
+    GreaterThanOrEqual,
     Immediate,
+    IntPattern,
     IsNil,
     Let,
     LetRec,
+    LessThan,
+    LessThanOrEqual,
     ListLiteral,
     Load,
+    Match,
+    Mod,
+    NamePattern,
     Nil,
+    NilPattern,
+    Not,
+    NotEqual,
+    Or,
     Primitive,
     Program,
     Reference,
     Store,
     Tuple,
+    TuplePattern,
     TupleRef,
+    WildcardPattern,
 )
 
 # ── parse_program ─────────────────────────────────────────────────────────────
@@ -337,6 +357,141 @@ def test_parse_list_literal() -> None:
     assert parse_term("(list 1 2)") == ListLiteral(
         elements=[Immediate(value=1), Immediate(value=2)],
     )
+
+
+def test_parse_program_true_literal() -> None:
+    p = parse_program("(l3 () true)")
+    assert isinstance(p.body, BoolLiteral) and p.body.value is True
+
+
+def test_parse_program_false_literal() -> None:
+    p = parse_program("(l3 () false)")
+    assert isinstance(p.body, BoolLiteral) and p.body.value is False
+
+
+def test_parse_program_not() -> None:
+    p = parse_program("(l3 (x) (not x))")
+    assert isinstance(p.body, Not)
+
+
+def test_parse_program_and() -> None:
+    p = parse_program("(l3 (x y) (and x y))")
+    assert isinstance(p.body, And)
+
+
+def test_parse_program_or() -> None:
+    p = parse_program("(l3 (x y) (or x y))")
+    assert isinstance(p.body, Or)
+
+
+def test_parse_program_cond() -> None:
+    p = parse_program("(l3 (x) (cond ((< x 0) 1) (else 0)))")
+    assert isinstance(p.body, Cond)
+
+
+def test_parse_program_div() -> None:
+    p = parse_program("(l3 (x y) (/ x y))")
+    assert isinstance(p.body, Div)
+
+
+def test_parse_program_mod() -> None:
+    p = parse_program("(l3 (x y) (% x y))")
+    assert isinstance(p.body, Mod)
+
+
+def test_parse_program_gt() -> None:
+    p = parse_program("(l3 (x y) (> x y))")
+    assert isinstance(p.body, GreaterThan)
+
+
+def test_parse_program_gte() -> None:
+    p = parse_program("(l3 (x y) (>= x y))")
+    assert isinstance(p.body, GreaterThanOrEqual)
+
+
+def test_parse_program_lte() -> None:
+    p = parse_program("(l3 (x y) (<= x y))")
+    assert isinstance(p.body, LessThanOrEqual)
+
+
+def test_parse_program_neq() -> None:
+    p = parse_program("(l3 (x y) (!= x y))")
+    assert isinstance(p.body, NotEqual)
+
+
+def test_parse_program_nil() -> None:
+    p = parse_program("(l3 () nil)")
+    assert isinstance(p.body, Nil)
+
+
+def test_parse_program_cons() -> None:
+    p = parse_program("(l3 (x y) (cons x y))")
+    assert isinstance(p.body, Cons)
+
+
+def test_parse_program_car() -> None:
+    p = parse_program("(l3 (x) (car x))")
+    assert isinstance(p.body, Car)
+
+
+def test_parse_program_cdr() -> None:
+    p = parse_program("(l3 (x) (cdr x))")
+    assert isinstance(p.body, Cdr)
+
+
+def test_parse_program_is_nil() -> None:
+    p = parse_program("(l3 (x) (null? x))")
+    assert isinstance(p.body, IsNil)
+
+
+def test_parse_program_list_three_elements() -> None:
+    p = parse_program("(l3 () (list 1 2 3))")
+    assert isinstance(p.body, ListLiteral)
+
+
+def test_parse_program_tuple_two_elements() -> None:
+    p = parse_program("(l3 () (tuple 1 2))")
+    assert isinstance(p.body, Tuple)
+
+
+def test_parse_program_tuple_ref() -> None:
+    p = parse_program("(l3 (t) (tuple-ref t 0))")
+    assert isinstance(p.body, TupleRef)
+
+
+def test_parse_program_match_int_and_wildcard() -> None:
+    p = parse_program("(l3 (x) (match x (0 1) (_ 0)))")
+    assert isinstance(p.body, Match)
+    assert isinstance(p.body.clauses[0][0], IntPattern)
+    assert isinstance(p.body.clauses[1][0], WildcardPattern)
+
+
+def test_parse_program_match_cons_and_nil() -> None:
+    p = parse_program("(l3 (x) (match x ((cons h t) h) (nil 0)))")
+    assert isinstance(p.body, Match)
+    assert isinstance(p.body.clauses[0][0], ConsPattern)
+    assert isinstance(p.body.clauses[1][0], NilPattern)
+
+
+def test_parse_program_match_bool_patterns() -> None:
+    p = parse_program("(l3 (x) (match x (true 1) (false 0)))")
+    assert isinstance(p.body, Match)
+    assert isinstance(p.body.clauses[0][0], BoolPattern) and p.body.clauses[0][0].value is True
+    assert isinstance(p.body.clauses[1][0], BoolPattern) and p.body.clauses[1][0].value is False
+
+
+def test_parse_program_match_tuple_pattern() -> None:
+    p = parse_program("(l3 (x) (match x ((tuple a b) a)))")
+    assert isinstance(p.body, Match)
+    assert isinstance(p.body.clauses[0][0], TuplePattern)
+    assert p.body.clauses[0][0].elements == ["a", "b"]
+
+
+def test_parse_program_match_name_pattern() -> None:
+    p = parse_program("(l3 (x) (match x (n n)))")
+    assert isinstance(p.body, Match)
+    assert isinstance(p.body.clauses[0][0], NamePattern)
+    assert p.body.clauses[0][0].name == "n"
 
 
 # ── syntax errors ─────────────────────────────────────────────────────────────

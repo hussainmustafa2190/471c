@@ -53,7 +53,7 @@ class ConstantPropagation:
                     new_bindings.append((n, recur(v)))
                     if n == name:
                         shadowed = True
-                        new_bindings += [(bn, bv) for bn, bv in list(bindings)[len(new_bindings):]]
+                        new_bindings += [(bn, bv) for bn, bv in list(bindings)[len(new_bindings) :]]
                         break
                 new_body = body if shadowed else recur(body)
                 return Let(bindings=new_bindings, body=new_body)
@@ -70,8 +70,13 @@ class ConstantPropagation:
                 return Primitive(operator=op, left=recur(left), right=recur(right))
 
             case Branch(operator=op, left=left, right=right, consequent=consequent, otherwise=otherwise):
-                return Branch(operator=op, left=recur(left), right=recur(right),
-                              consequent=recur(consequent), otherwise=recur(otherwise))
+                return Branch(
+                    operator=op,
+                    left=recur(left),
+                    right=recur(right),
+                    consequent=recur(consequent),
+                    otherwise=recur(otherwise),
+                )
 
             case Load(base=base, index=index):
                 return Load(base=recur(base), index=index)
@@ -89,16 +94,42 @@ class ConstantPropagation:
     def _fold(self, term: Term) -> Term:
         match term:
             case Primitive(operator=op, left=Immediate(value=lv), right=Immediate(value=rv)):
-                if op == "+":
-                    return Immediate(value=lv + rv)
-                elif op == "-":
-                    return Immediate(value=lv - rv)
-                else:
-                    return Immediate(value=lv * rv)
+                match op:
+                    case "+":
+                        return Immediate(value=lv + rv)
+                    case "-":
+                        return Immediate(value=lv - rv)
+                    case "*":
+                        return Immediate(value=lv * rv)
+                    case "/":
+                        return Immediate(value=lv // rv)
+                    case "%":
+                        return Immediate(value=lv % rv)
+                    case _:  # pragma: no branch
+                        return term
 
-            case Branch(operator=op, left=Immediate(value=lv), right=Immediate(value=rv),
-                        consequent=consequent, otherwise=otherwise):
-                result = (lv < rv) if op == "<" else (lv == rv)
+            case Branch(
+                operator=op,
+                left=Immediate(value=lv),
+                right=Immediate(value=rv),
+                consequent=consequent,
+                otherwise=otherwise,
+            ):
+                match op:
+                    case "<":
+                        result = lv < rv
+                    case "==":
+                        result = lv == rv
+                    case ">":
+                        result = lv > rv
+                    case ">=":
+                        result = lv >= rv
+                    case "<=":
+                        result = lv <= rv
+                    case "!=":
+                        result = lv != rv
+                    case _:  # pragma: no branch
+                        return term
                 return self.run(consequent) if result else self.run(otherwise)
 
         return term
@@ -145,12 +176,23 @@ class ConstantPropagation:
                 return folded
 
             case Branch(operator=op, left=left, right=right, consequent=consequent, otherwise=otherwise):
-                folded = self._fold(Branch(operator=op, left=self.run(left), right=self.run(right),
-                                           consequent=consequent, otherwise=otherwise))
+                folded = self._fold(
+                    Branch(
+                        operator=op,
+                        left=self.run(left),
+                        right=self.run(right),
+                        consequent=consequent,
+                        otherwise=otherwise,
+                    )
+                )
                 if isinstance(folded, Branch):
-                    return Branch(operator=folded.operator, left=folded.left, right=folded.right,
-                                  consequent=self.run(folded.consequent),
-                                  otherwise=self.run(folded.otherwise))
+                    return Branch(
+                        operator=folded.operator,
+                        left=folded.left,
+                        right=folded.right,
+                        consequent=self.run(folded.consequent),
+                        otherwise=self.run(folded.otherwise),
+                    )
                 return folded
 
             case Load(base=base, index=index):
@@ -199,8 +241,12 @@ class DeadCodeElimination:
                 return self._free_names(left) | self._free_names(right)
 
             case Branch(left=left, right=right, consequent=consequent, otherwise=otherwise):
-                return (self._free_names(left) | self._free_names(right)
-                        | self._free_names(consequent) | self._free_names(otherwise))
+                return (
+                    self._free_names(left)
+                    | self._free_names(right)
+                    | self._free_names(consequent)
+                    | self._free_names(otherwise)
+                )
 
             case Load(base=base):
                 return self._free_names(base)
@@ -253,8 +299,13 @@ class DeadCodeElimination:
                 return Primitive(operator=op, left=self.run(left), right=self.run(right))
 
             case Branch(operator=op, left=left, right=right, consequent=consequent, otherwise=otherwise):
-                return Branch(operator=op, left=self.run(left), right=self.run(right),
-                              consequent=self.run(consequent), otherwise=self.run(otherwise))
+                return Branch(
+                    operator=op,
+                    left=self.run(left),
+                    right=self.run(right),
+                    consequent=self.run(consequent),
+                    otherwise=self.run(otherwise),
+                )
 
             case Load(base=base, index=index):
                 return Load(base=self.run(base), index=index)
@@ -272,6 +323,7 @@ class DeadCodeElimination:
 # ---------------------------------------------------------------------------
 # Top-level: run both passes in a loop until nothing changes
 # ---------------------------------------------------------------------------
+
 
 def optimize_program(
     program: Program,

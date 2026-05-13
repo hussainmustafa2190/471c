@@ -68,8 +68,14 @@ def to_ast_term(
                 case "-":
                     op = ast.Sub()
 
-                case "*":  # pragma: no branch
+                case "*":
                     op = ast.Mult()
+
+                case "/":
+                    op = ast.FloorDiv()
+
+                case "%":  # pragma: no branch
+                    op = ast.Mod()
 
             return ast.BinOp(left=_term(left), op=op, right=_term(right))
 
@@ -78,8 +84,20 @@ def to_ast_term(
                 case "<":
                     op = ast.Lt()
 
-                case "==":  # pragma: no branch
+                case "==":
                     op = ast.Eq()
+
+                case ">":
+                    op = ast.Gt()
+
+                case ">=":
+                    op = ast.GtE()
+
+                case "<=":
+                    op = ast.LtE()
+
+                case "!=":  # pragma: no branch
+                    op = ast.NotEq()
 
             return ast.IfExp(
                 test=ast.Compare(left=_term(left), ops=[op], comparators=[_term(right)]),

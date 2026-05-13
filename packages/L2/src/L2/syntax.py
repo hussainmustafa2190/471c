@@ -50,14 +50,14 @@ class Immediate(BaseModel, frozen=True):
 
 class Primitive(BaseModel, frozen=True):
     tag: Literal["primitive"] = "primitive"
-    operator: Literal["+", "-", "*"]
+    operator: Literal["+", "-", "*", "/", "%"]
     left: Term
     right: Term
 
 
 class Branch(BaseModel, frozen=True):
     tag: Literal["branch"] = "branch"
-    operator: Literal["<", "=="]
+    operator: Literal["<", "==", ">", ">=", "<=", "!="]
     left: Term
     right: Term
     consequent: Term

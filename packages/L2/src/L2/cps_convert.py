@@ -25,11 +25,14 @@ def cps_convert_term(
                 if not remaining:
                     return _term(body, k)
                 (name, val), *rest = remaining
-                return _term(val, lambda src: L1.Copy(
-                    destination=name,
-                    source=src,
-                    then=convert_bindings(rest),
-                ))
+                return _term(
+                    val,
+                    lambda src: L1.Copy(
+                        destination=name,
+                        source=src,
+                        then=convert_bindings(rest),
+                    ),
+                )
 
             return convert_bindings(list(bindings))
 
@@ -46,10 +49,13 @@ def cps_convert_term(
             return L1.Abstract(
                 destination=dest,
                 parameters=[*parameters, k_name],
-                body=_term(body, lambda result: L1.Apply(
-                    target=k_name,
-                    arguments=[result],
-                )),
+                body=_term(
+                    body,
+                    lambda result: L1.Apply(
+                        target=k_name,
+                        arguments=[result],
+                    ),
+                ),
                 then=k(dest),
             )
 
@@ -59,15 +65,18 @@ def cps_convert_term(
             # extra argument, then tail-call the function.
             k_name = fresh("k")
             result = fresh("t")
-            return _terms([target, *arguments], lambda vals: L1.Abstract(
-                destination=k_name,
-                parameters=[result],
-                body=k(result),
-                then=L1.Apply(
-                    target=vals[0],
-                    arguments=[*vals[1:], k_name],
+            return _terms(
+                [target, *arguments],
+                lambda vals: L1.Abstract(
+                    destination=k_name,
+                    parameters=[result],
+                    body=k(result),
+                    then=L1.Apply(
+                        target=vals[0],
+                        arguments=[*vals[1:], k_name],
+                    ),
                 ),
-            ))
+            )
 
         case L2.Immediate(value=value):
             dest = fresh("t")
@@ -76,31 +85,37 @@ def cps_convert_term(
         case L2.Primitive(operator=operator, left=left, right=right):
             # Evaluate both operands, then emit the operation
             dest = fresh("t")
-            return _terms([left, right], lambda vals: L1.Primitive(
-                destination=dest,
-                operator=operator,
-                left=vals[0],
-                right=vals[1],
-                then=k(dest),
-            ))
+            return _terms(
+                [left, right],
+                lambda vals: L1.Primitive(
+                    destination=dest,
+                    operator=operator,
+                    left=vals[0],
+                    right=vals[1],
+                    then=k(dest),
+                ),
+            )
 
         case L2.Branch(operator=operator, left=left, right=right, consequent=consequent, otherwise=otherwise):
             # Create a join-point continuation so both branches converge
             # to the same "rest of the program".
             j_name = fresh("j")
             result = fresh("t")
-            return _terms([left, right], lambda vals: L1.Abstract(
-                destination=j_name,
-                parameters=[result],
-                body=k(result),
-                then=L1.Branch(
-                    operator=operator,
-                    left=vals[0],
-                    right=vals[1],
-                    then=_term(consequent, lambda v: L1.Apply(target=j_name, arguments=[v])),
-                    otherwise=_term(otherwise, lambda v: L1.Apply(target=j_name, arguments=[v])),
+            return _terms(
+                [left, right],
+                lambda vals: L1.Abstract(
+                    destination=j_name,
+                    parameters=[result],
+                    body=k(result),
+                    then=L1.Branch(
+                        operator=operator,
+                        left=vals[0],
+                        right=vals[1],
+                        then=_term(consequent, lambda v: L1.Apply(target=j_name, arguments=[v])),
+                        otherwise=_term(otherwise, lambda v: L1.Apply(target=j_name, arguments=[v])),
+                    ),
                 ),
-            ))
+            )
 
         case L2.Allocate(count=count):
             dest = fresh("t")
@@ -108,23 +123,29 @@ def cps_convert_term(
 
         case L2.Load(base=base, index=index):
             dest = fresh("t")
-            return _term(base, lambda b: L1.Load(
-                destination=dest,
-                base=b,
-                index=index,
-                then=k(dest),
-            ))
+            return _term(
+                base,
+                lambda b: L1.Load(
+                    destination=dest,
+                    base=b,
+                    index=index,
+                    then=k(dest),
+                ),
+            )
 
         case L2.Store(base=base, index=index, value=value):
             # Store has no meaningful return value — emit a dummy Immediate(0)
             # after the store so k has something to receive.
             dummy = fresh("t")
-            return _terms([base, value], lambda vals: L1.Store(
-                base=vals[0],
-                index=index,
-                value=vals[1],
-                then=L1.Immediate(destination=dummy, value=0, then=k(dummy)),
-            ))
+            return _terms(
+                [base, value],
+                lambda vals: L1.Store(
+                    base=vals[0],
+                    index=index,
+                    value=vals[1],
+                    then=L1.Immediate(destination=dummy, value=0, then=k(dummy)),
+                ),
+            )
 
         case L2.Begin(effects=effects, value=value):  # pragma: no branch
             # Effects are evaluated for side effects only — their results are

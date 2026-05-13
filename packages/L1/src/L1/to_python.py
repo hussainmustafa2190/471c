@@ -73,8 +73,14 @@ def to_ast_statement(
                 case "-":
                     op = ast.Sub()
 
-                case "*":  # pragma: no branch
+                case "*":
                     op = ast.Mult()
+
+                case "/":
+                    op = ast.FloorDiv()
+
+                case "%":  # pragma: no branch
+                    op = ast.Mod()
 
             return [
                 ast.Assign(
@@ -89,8 +95,20 @@ def to_ast_statement(
                 case "<":
                     op = ast.Lt()
 
-                case "==":  # pragma: no branch
+                case "==":
                     op = ast.Eq()
+
+                case ">":
+                    op = ast.Gt()
+
+                case ">=":
+                    op = ast.GtE()
+
+                case "<=":
+                    op = ast.LtE()
+
+                case "!=":  # pragma: no branch
+                    op = ast.NotEq()
 
             return [
                 ast.If(

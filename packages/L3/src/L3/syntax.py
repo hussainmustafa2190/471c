@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -50,18 +50,139 @@ class Immediate(BaseModel, frozen=True):
 
 class Primitive(BaseModel, frozen=True):
     tag: Literal["primitive"] = "primitive"
-    operator: Literal["+", "-", "*"]
+    operator: Literal["+", "-", "*", "/", "%"]
     left: "Term"
     right: "Term"
 
 
 class Branch(BaseModel, frozen=True):
     tag: Literal["branch"] = "branch"
-    operator: Literal["<", "=="]
+    operator: Literal["<", "==", ">", ">=", "<=", "!="]
     left: "Term"
     right: "Term"
     consequent: "Term"
     otherwise: "Term"
+
+
+class BoolLiteral(BaseModel, frozen=True):
+    tag: Literal["bool"] = "bool"
+    value: bool
+
+
+class And(BaseModel, frozen=True):
+    tag: Literal["and"] = "and"
+    left: "Term"
+    right: "Term"
+
+
+class Or(BaseModel, frozen=True):
+    tag: Literal["or"] = "or"
+    left: "Term"
+    right: "Term"
+
+
+class Not(BaseModel, frozen=True):
+    tag: Literal["not"] = "not"
+    operand: "Term"
+
+
+class Cond(BaseModel, frozen=True):
+    tag: Literal["cond"] = "cond"
+    clauses: Sequence[tuple[Optional["Term"], "Term"]]
+
+
+class Div(BaseModel, frozen=True):
+    tag: Literal["div"] = "div"
+    left: "Term"
+    right: "Term"
+
+
+class Mod(BaseModel, frozen=True):
+    tag: Literal["mod"] = "mod"
+    left: "Term"
+    right: "Term"
+
+
+class GreaterThan(BaseModel, frozen=True):
+    tag: Literal["gt"] = "gt"
+    left: "Term"
+    right: "Term"
+
+
+class GreaterThanOrEqual(BaseModel, frozen=True):
+    tag: Literal["gte"] = "gte"
+    left: "Term"
+    right: "Term"
+
+
+class LessThanOrEqual(BaseModel, frozen=True):
+    tag: Literal["lte"] = "lte"
+    left: "Term"
+    right: "Term"
+
+
+class NotEqual(BaseModel, frozen=True):
+    tag: Literal["neq"] = "neq"
+    left: "Term"
+    right: "Term"
+
+
+class LessThan(BaseModel, frozen=True):
+    tag: Literal["lt"] = "lt"
+    left: "Term"
+    right: "Term"
+
+
+class IntPattern(BaseModel, frozen=True):
+    tag: Literal["int-pattern"] = "int-pattern"
+    value: int
+
+
+class BoolPattern(BaseModel, frozen=True):
+    tag: Literal["bool-pattern"] = "bool-pattern"
+    value: bool
+
+
+class NilPattern(BaseModel, frozen=True):
+    tag: Literal["nil-pattern"] = "nil-pattern"
+
+
+class ConsPattern(BaseModel, frozen=True):
+    tag: Literal["cons-pattern"] = "cons-pattern"
+    head: Identifier
+    tail: Identifier
+
+
+class TuplePattern(BaseModel, frozen=True):
+    tag: Literal["tuple-pattern"] = "tuple-pattern"
+    elements: Sequence[Identifier]
+
+
+class WildcardPattern(BaseModel, frozen=True):
+    tag: Literal["wildcard-pattern"] = "wildcard-pattern"
+
+
+class NamePattern(BaseModel, frozen=True):
+    tag: Literal["name-pattern"] = "name-pattern"
+    name: Identifier
+
+
+type Pattern = Annotated[
+    IntPattern
+    | BoolPattern
+    | NilPattern
+    | ConsPattern
+    | TuplePattern
+    | WildcardPattern
+    | NamePattern,
+    Field(discriminator="tag"),
+]
+
+
+class Match(BaseModel, frozen=True):
+    tag: Literal["match"] = "match"
+    scrutinee: "Term"
+    clauses: Sequence[tuple[Pattern, "Term"]]
 
 
 class Allocate(BaseModel, frozen=True):
@@ -138,6 +259,19 @@ type Term = Annotated[
     | Immediate
     | Primitive
     | Branch
+    | BoolLiteral
+    | And
+    | Or
+    | Not
+    | Cond
+    | Div
+    | Mod
+    | GreaterThan
+    | GreaterThanOrEqual
+    | LessThanOrEqual
+    | NotEqual
+    | LessThan
+    | Match
     | Allocate
     | Load
     | Store
@@ -173,3 +307,23 @@ Car.model_rebuild()
 Cdr.model_rebuild()
 IsNil.model_rebuild()
 ListLiteral.model_rebuild()
+BoolLiteral.model_rebuild()
+And.model_rebuild()
+Or.model_rebuild()
+Not.model_rebuild()
+Cond.model_rebuild()
+Div.model_rebuild()
+Mod.model_rebuild()
+GreaterThan.model_rebuild()
+GreaterThanOrEqual.model_rebuild()
+LessThanOrEqual.model_rebuild()
+NotEqual.model_rebuild()
+LessThan.model_rebuild()
+IntPattern.model_rebuild()
+BoolPattern.model_rebuild()
+NilPattern.model_rebuild()
+ConsPattern.model_rebuild()
+TuplePattern.model_rebuild()
+WildcardPattern.model_rebuild()
+NamePattern.model_rebuild()
+Match.model_rebuild()

@@ -15,7 +15,6 @@ Coverage targets:
   optimize_program                 — loop runs to stability, existing test case
 """
 
-
 from L2.optimize import ConstantPropagation, DeadCodeElimination, optimize_program
 from L2.syntax import (
     Abstract,
@@ -44,8 +43,8 @@ dce = DeadCodeElimination()
 # ConstantPropagation._subst
 # ===========================================================================
 
-class TestSubst:
 
+class TestSubst:
     def test_reference_matching(self):
         # The name we are substituting — should be replaced
         assert cp._subst(Reference(name="x"), "x", Immediate(value=5)) == Immediate(value=5)
@@ -152,8 +151,8 @@ class TestSubst:
 # ConstantPropagation._fold
 # ===========================================================================
 
-class TestFold:
 
+class TestFold:
     def test_fold_add(self):
         term = Primitive(operator="+", left=Immediate(value=3), right=Immediate(value=4))
         assert cp._fold(term) == Immediate(value=7)
@@ -165,6 +164,14 @@ class TestFold:
     def test_fold_mul(self):
         term = Primitive(operator="*", left=Immediate(value=3), right=Immediate(value=4))
         assert cp._fold(term) == Immediate(value=12)
+
+    def test_fold_div(self):
+        term = Primitive(operator="/", left=Immediate(value=9), right=Immediate(value=3))
+        assert cp._fold(term) == Immediate(value=3)
+
+    def test_fold_mod(self):
+        term = Primitive(operator="%", left=Immediate(value=10), right=Immediate(value=3))
+        assert cp._fold(term) == Immediate(value=1)
 
     def test_fold_branch_lt_true(self):
         # 1 < 2 is true → consequent
@@ -208,18 +215,78 @@ class TestFold:
         )
         assert cp._fold(term) == Immediate(value=0)
 
+    def test_fold_branch_gt_true(self):
+        term = Branch(
+            operator=">",
+            left=Immediate(value=5),
+            right=Immediate(value=3),
+            consequent=Immediate(value=111),
+            otherwise=Immediate(value=222),
+        )
+        assert cp._fold(term) == Immediate(value=111)
+
+    def test_fold_branch_gte_true(self):
+        term = Branch(
+            operator=">=",
+            left=Immediate(value=5),
+            right=Immediate(value=5),
+            consequent=Immediate(value=111),
+            otherwise=Immediate(value=222),
+        )
+        assert cp._fold(term) == Immediate(value=111)
+
+    def test_fold_branch_lte_true(self):
+        term = Branch(
+            operator="<=",
+            left=Immediate(value=3),
+            right=Immediate(value=5),
+            consequent=Immediate(value=111),
+            otherwise=Immediate(value=222),
+        )
+        assert cp._fold(term) == Immediate(value=111)
+
+    def test_fold_branch_neq_true(self):
+        term = Branch(
+            operator="!=",
+            left=Immediate(value=3),
+            right=Immediate(value=4),
+            consequent=Immediate(value=111),
+            otherwise=Immediate(value=222),
+        )
+        assert cp._fold(term) == Immediate(value=111)
+
     def test_fold_no_match_returns_term(self):
         # Not both Immediates — nothing to fold
         term = Primitive(operator="+", left=Reference(name="x"), right=Immediate(value=1))
         assert cp._fold(term) is term
+
+    def test_fold_primitive_unknown_operator_returns_term(self):
+        bad = Primitive.model_construct(
+            tag="primitive",
+            operator="?",
+            left=Immediate(value=1),
+            right=Immediate(value=2),
+        )
+        assert cp._fold(bad) is bad
+
+    def test_fold_branch_unknown_operator_returns_term(self):
+        bad = Branch.model_construct(
+            tag="branch",
+            operator="?",
+            left=Immediate(value=1),
+            right=Immediate(value=2),
+            consequent=Immediate(value=3),
+            otherwise=Immediate(value=4),
+        )
+        assert cp._fold(bad) is bad
 
 
 # ===========================================================================
 # ConstantPropagation.run
 # ===========================================================================
 
-class TestCPRun:
 
+class TestCPRun:
     def test_immediate(self):
         assert cp.run(Immediate(value=42)) == Immediate(value=42)
 
@@ -366,8 +433,8 @@ class TestCPRun:
 # DeadCodeElimination._free_names
 # ===========================================================================
 
-class TestFreeNames:
 
+class TestFreeNames:
     def test_reference(self):
         assert dce._free_names(Reference(name="x")) == frozenset({"x"})
 
@@ -429,8 +496,8 @@ class TestFreeNames:
 # DeadCodeElimination._is_pure
 # ===========================================================================
 
-class TestIsPure:
 
+class TestIsPure:
     def test_immediate(self):
         assert dce._is_pure(Immediate(value=1)) is True
 
@@ -476,8 +543,8 @@ class TestIsPure:
 # DeadCodeElimination.run
 # ===========================================================================
 
-class TestDCERun:
 
+class TestDCERun:
     def test_immediate(self):
         assert dce.run(Immediate(value=5)) == Immediate(value=5)
 
@@ -575,8 +642,8 @@ class TestDCERun:
 # optimize_program — integration / loop tests
 # ===========================================================================
 
-class TestOptimizeProgram:
 
+class TestOptimizeProgram:
     def test_existing_test_case(self):
         # The test that ships with the repo
         program = Program(

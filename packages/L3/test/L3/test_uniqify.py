@@ -25,6 +25,7 @@ def make_fresh():
 # Shipped tests (kept exactly as-is)
 # ===========================================================================
 
+
 def test_uniqify_term_reference():
     term = Reference(name="x")
     context: Context = {"x": "y"}
@@ -74,6 +75,7 @@ def test_uniqify_term_let():
 # Immediate / Allocate — leaf nodes returned unchanged
 # ===========================================================================
 
+
 def test_immediate_unchanged():
     term = Immediate(value=0)
     assert uniqify_term(term, {}, make_fresh()) == Immediate(value=0)
@@ -88,6 +90,7 @@ def test_allocate_unchanged():
 # Reference
 # ===========================================================================
 
+
 def test_reference_looks_up_context():
     assert uniqify_term(Reference(name="a"), {"a": "a99"}, make_fresh()) == Reference(name="a99")
 
@@ -95,6 +98,7 @@ def test_reference_looks_up_context():
 # ===========================================================================
 # Let — scoping rules
 # ===========================================================================
+
 
 def test_let_single_binding_renamed():
     term = Let(bindings=[("a", Immediate(value=5))], body=Reference(name="a"))
@@ -139,6 +143,7 @@ def test_let_shadows_outer_name():
 # LetRec — all binders visible in values AND body
 # ===========================================================================
 
+
 def test_letrec_binder_visible_in_own_value():
     # The bound name "fact" must be visible inside its own binding value (self-recursion)
     term = LetRec(
@@ -156,7 +161,7 @@ def test_letrec_mutual_recursion():
     term = LetRec(
         bindings=[
             ("even", Abstract(parameters=["n"], body=Reference(name="odd"))),
-            ("odd",  Abstract(parameters=["n"], body=Reference(name="even"))),
+            ("odd", Abstract(parameters=["n"], body=Reference(name="even"))),
         ],
         body=Apply(target=Reference(name="even"), arguments=[Immediate(value=4)]),
     )
@@ -164,7 +169,7 @@ def test_letrec_mutual_recursion():
     assert result == LetRec(
         bindings=[
             ("even0", Abstract(parameters=["n0"], body=Reference(name="odd0"))),
-            ("odd0",  Abstract(parameters=["n1"], body=Reference(name="even0"))),
+            ("odd0", Abstract(parameters=["n1"], body=Reference(name="even0"))),
         ],
         body=Apply(target=Reference(name="even0"), arguments=[Immediate(value=4)]),
     )
@@ -185,6 +190,7 @@ def test_letrec_body_sees_new_names():
 # ===========================================================================
 # Abstract
 # ===========================================================================
+
 
 def test_abstract_parameter_renamed():
     term = Abstract(parameters=["x"], body=Reference(name="x"))
@@ -220,6 +226,7 @@ def test_abstract_multiple_parameters():
 # Apply
 # ===========================================================================
 
+
 def test_apply_renames_target_and_arguments():
     term = Apply(
         target=Reference(name="f"),
@@ -242,6 +249,7 @@ def test_apply_no_arguments():
 # Primitive
 # ===========================================================================
 
+
 def test_primitive_renames_operands():
     term = Primitive(operator="*", left=Reference(name="a"), right=Reference(name="b"))
     result = uniqify_term(term, {"a": "a0", "b": "b0"}, make_fresh())
@@ -263,6 +271,7 @@ def test_primitive_sub_operator():
 # ===========================================================================
 # Branch
 # ===========================================================================
+
 
 def test_branch_lt_all_parts_renamed():
     term = Branch(
@@ -298,6 +307,7 @@ def test_branch_eq_operator():
 # Load
 # ===========================================================================
 
+
 def test_load_base_renamed():
     term = Load(base=Reference(name="x"), index=0)
     result = uniqify_term(term, {"x": "x0"}, make_fresh())
@@ -314,6 +324,7 @@ def test_load_index_preserved():
 # Store
 # ===========================================================================
 
+
 def test_store_base_and_value_renamed():
     term = Store(base=Reference(name="x"), index=0, value=Reference(name="y"))
     result = uniqify_term(term, {"x": "x0", "y": "y0"}, make_fresh())
@@ -323,6 +334,7 @@ def test_store_base_and_value_renamed():
 # ===========================================================================
 # Begin
 # ===========================================================================
+
 
 def test_begin_effects_and_value_renamed():
     term = Begin(
@@ -345,6 +357,7 @@ def test_begin_no_effects():
 # ===========================================================================
 # uniqify_program
 # ===========================================================================
+
 
 def test_program_parameter_renamed():
     program = Program(parameters=["x"], body=Reference(name="x"))
@@ -424,29 +437,32 @@ def test_program_letrec_factorial():
         parameters=["x"],
         body=LetRec(
             bindings=[
-                ("fact", Abstract(
-                    parameters=["n"],
-                    body=Branch(
-                        operator="==",
-                        left=Reference(name="n"),
-                        right=Immediate(value=0),
-                        consequent=Immediate(value=1),
-                        otherwise=Primitive(
-                            operator="*",
+                (
+                    "fact",
+                    Abstract(
+                        parameters=["n"],
+                        body=Branch(
+                            operator="==",
                             left=Reference(name="n"),
-                            right=Apply(
-                                target=Reference(name="fact"),
-                                arguments=[
-                                    Primitive(
-                                        operator="-",
-                                        left=Reference(name="n"),
-                                        right=Immediate(value=1),
-                                    )
-                                ],
+                            right=Immediate(value=0),
+                            consequent=Immediate(value=1),
+                            otherwise=Primitive(
+                                operator="*",
+                                left=Reference(name="n"),
+                                right=Apply(
+                                    target=Reference(name="fact"),
+                                    arguments=[
+                                        Primitive(
+                                            operator="-",
+                                            left=Reference(name="n"),
+                                            right=Immediate(value=1),
+                                        )
+                                    ],
+                                ),
                             ),
                         ),
                     ),
-                ))
+                )
             ],
             body=Apply(target=Reference(name="fact"), arguments=[Reference(name="x")]),
         ),

@@ -7,27 +7,58 @@ from lark.visitors import v_args  # pyright: ignore[reportUnknownVariableType]
 from .syntax import (
     Abstract,
     Allocate,
+    And,
     Apply,
     Begin,
+    BoolLiteral,
+    BoolPattern,
     Branch,
     Car,
     Cdr,
     Cons,
+    ConsPattern,
+    Cond,
+    Div,
+    GreaterThan,
+    GreaterThanOrEqual,
     Identifier,
     Immediate,
+    IntPattern,
     IsNil,
     Let,
     LetRec,
+    LessThan,
+    LessThanOrEqual,
     ListLiteral,
     Load,
+    Match,
+    Mod,
+    NamePattern,
     Nil,
+    NilPattern,
+    Not,
+    NotEqual,
+    Or,
     Primitive,
     Program,
     Reference,
     Store,
     Term,
     Tuple,
+    TuplePattern,
     TupleRef,
+    WildcardPattern,
+    Pattern,
+)
+
+_PATTERN_TYPES = (
+    IntPattern,
+    BoolPattern,
+    NilPattern,
+    ConsPattern,
+    TuplePattern,
+    WildcardPattern,
+    NamePattern,
 )
 
 _TERM_TYPES = (
@@ -39,6 +70,19 @@ _TERM_TYPES = (
     Immediate,
     Primitive,
     Branch,
+    BoolLiteral,
+    And,
+    Or,
+    Not,
+    Cond,
+    Div,
+    Mod,
+    LessThan,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThanOrEqual,
+    NotEqual,
+    Match,
     Allocate,
     Load,
     Store,
@@ -256,6 +300,204 @@ class AstTransformer(Transformer[Token, Program | Term]):
     ) -> Term:
         elements = [c for c in children if isinstance(c, _TERM_TYPES)]
         return ListLiteral(elements=elements)
+
+    @v_args(inline=True)
+    def true_term(
+        self,
+        _t: Token,
+    ) -> Term:
+        return BoolLiteral(value=True)
+
+    @v_args(inline=True)
+    def false_term(
+        self,
+        _t: Token,
+    ) -> Term:
+        return BoolLiteral(value=False)
+
+    def and_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return And(left=terms[0], right=terms[1])
+
+    def or_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return Or(left=terms[0], right=terms[1])
+
+    def not_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 1
+        return Not(operand=terms[0])
+
+    @v_args(inline=True)
+    def cond_clause_normal(
+        self,
+        cond: Term,
+        body: Term,
+    ) -> tuple[Term | None, Term]:
+        return (cond, body)
+
+    def cond_clause_else(
+        self,
+        children: list[object],
+    ) -> tuple[Term | None, Term]:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 1
+        return (None, terms[0])
+
+    def cond_clauses(
+        self,
+        clauses: list[tuple[Term | None, Term]],
+    ) -> list[tuple[Term | None, Term]]:
+        return clauses
+
+    def cond_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        clauses: list[tuple[Term | None, Term]] = []
+        for c in children:
+            if isinstance(c, list):
+                clauses.extend(c)
+        return Cond(clauses=clauses)
+
+    def div_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return Div(left=terms[0], right=terms[1])
+
+    def mod_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return Mod(left=terms[0], right=terms[1])
+
+    def gt_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return GreaterThan(left=terms[0], right=terms[1])
+
+    def gte_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return GreaterThanOrEqual(left=terms[0], right=terms[1])
+
+    def lte_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return LessThanOrEqual(left=terms[0], right=terms[1])
+
+    def neq_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return NotEqual(left=terms[0], right=terms[1])
+
+    def lt_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        assert len(terms) == 2
+        return LessThan(left=terms[0], right=terms[1])
+
+    @v_args(inline=True)
+    def int_pattern(
+        self,
+        value: Token,
+    ) -> IntPattern:
+        return IntPattern(value=int(value))
+
+    def bool_pattern(
+        self,
+        children: list[object],
+    ) -> BoolPattern:
+        tok = next(c for c in children if isinstance(c, Token))
+        return BoolPattern(value=str(tok) == "true")
+
+    @v_args(inline=True)
+    def nil_pattern(
+        self,
+        _nil: Token,
+    ) -> NilPattern:
+        return NilPattern()
+
+    def cons_pattern(
+        self,
+        children: list[object],
+    ) -> ConsPattern:
+        names = [str(c) for c in children if isinstance(c, Token) and c.type == "PATNAME"]
+        assert len(names) == 2
+        return ConsPattern(head=names[0], tail=names[1])
+
+    def tuple_pattern(
+        self,
+        children: list[object],
+    ) -> TuplePattern:
+        names = [str(c) for c in children if isinstance(c, Token) and c.type == "PATNAME"]
+        return TuplePattern(elements=names)
+
+    @v_args(inline=True)
+    def wildcard_pattern(
+        self,
+        _w: Token,
+    ) -> WildcardPattern:
+        return WildcardPattern()
+
+    @v_args(inline=True)
+    def name_pattern(
+        self,
+        name: Token,
+    ) -> NamePattern:
+        return NamePattern(name=str(name))
+
+    def pattern(
+        self,
+        children: list[object],
+    ) -> Pattern:
+        return next(c for c in children if isinstance(c, _PATTERN_TYPES))
+
+    def match_clause(
+        self,
+        children: list[object],
+    ) -> tuple[Pattern, Term]:
+        pat = next(c for c in children if isinstance(c, _PATTERN_TYPES))
+        body = next(c for c in children if isinstance(c, _TERM_TYPES))
+        return (pat, body)
+
+    def match_term(
+        self,
+        children: list[object],
+    ) -> Term:
+        terms = [c for c in children if isinstance(c, _TERM_TYPES)]
+        clauses = [c for c in children if isinstance(c, tuple) and len(c) == 2]
+        return Match(scrutinee=terms[0], clauses=clauses)
 
 
 def parse_term(source: str) -> Term:

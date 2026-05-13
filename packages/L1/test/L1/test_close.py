@@ -196,4 +196,3 @@ def test_close_lifts_nested_abstracts_depth_first() -> None:
         name="f1",
         then=L0.Call(target="outer", arguments=["x"]),
     )
-

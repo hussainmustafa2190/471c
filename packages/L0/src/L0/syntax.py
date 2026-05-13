@@ -43,7 +43,7 @@ class Immediate(BaseModel, frozen=True):
 class Primitive(BaseModel, frozen=True):
     tag: Literal["primitive"] = "primitive"
     destination: Identifier
-    operator: Literal["+", "-", "*"]
+    operator: Literal["+", "-", "*", "/", "%"]
     left: Identifier
     right: Identifier
     then: Statement
@@ -51,7 +51,7 @@ class Primitive(BaseModel, frozen=True):
 
 class Branch(BaseModel, frozen=True):
     tag: Literal["branch"] = "branch"
-    operator: Literal["<", "=="]
+    operator: Literal["<", "==", ">", ">=", "<=", "!="]
     left: Identifier
     right: Identifier
     then: Statement

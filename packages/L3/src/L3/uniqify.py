@@ -47,10 +47,7 @@ def uniqify_term(
             # All binders are in scope for BOTH the values and the body
             local = {name: fresh(name) for name, _ in bindings}
             new_context = {**context, **local}
-            new_bindings = [
-                (local[name], uniqify_term(val, new_context, fresh))
-                for name, val in bindings
-            ]
+            new_bindings = [(local[name], uniqify_term(val, new_context, fresh)) for name, val in bindings]
             return LetRec(
                 bindings=new_bindings,
                 body=uniqify_term(body, new_context, fresh),

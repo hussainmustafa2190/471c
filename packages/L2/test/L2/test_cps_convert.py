@@ -16,6 +16,7 @@ def make_fresh():
 # Shipped tests — kept exactly as-is
 # ===========================================================================
 
+
 def test_cps_convert_term_name():
     term = L2.Reference(name="x")
     fresh = make_fresh()
@@ -37,7 +38,11 @@ def test_cps_convert_term_primitive():
     fresh = make_fresh()
     actual = cps_convert_term(term, k, fresh)
     expected = L1.Primitive(
-        destination="t0", operator="+", left="x", right="y", then=L1.Halt(value="t0"),
+        destination="t0",
+        operator="+",
+        left="x",
+        right="y",
+        then=L1.Halt(value="t0"),
     )
     assert actual == expected
 
@@ -50,7 +55,8 @@ def test_cps_convert_term_let():
     fresh = make_fresh()
     actual = cps_convert_term(term, k, fresh)
     expected = L1.Copy(
-        destination="a", source="x",
+        destination="a",
+        source="x",
         then=L1.Copy(destination="b", source="y", then=L1.Halt(value="b")),
     )
     assert actual == expected
@@ -97,7 +103,9 @@ def test_cps_convert_term_branch():
         parameters=["t0"],
         body=L1.Halt(value="t0"),
         then=L1.Branch(
-            operator="==", left="x", right="y",
+            operator="==",
+            left="x",
+            right="y",
             then=L1.Apply(target="j0", arguments=["a"]),
             otherwise=L1.Apply(target="j0", arguments=["b"]),
         ),
@@ -126,7 +134,9 @@ def test_cps_convert_term_store():
     fresh = make_fresh()
     actual = cps_convert_term(term, k, fresh)
     expected = L1.Store(
-        base="x", index=0, value="y",
+        base="x",
+        index=0,
+        value="y",
         then=L1.Immediate(destination="t0", value=0, then=L1.Halt(value="t0")),
     )
     assert actual == expected
@@ -156,6 +166,7 @@ def test_cps_convert_program():
 # Reference
 # ---------------------------------------------------------------------------
 
+
 def test_reference_passes_name_to_continuation():
     # The continuation receives the name unchanged
     results = []
@@ -166,6 +177,7 @@ def test_reference_passes_name_to_continuation():
 # ---------------------------------------------------------------------------
 # Immediate — different values
 # ---------------------------------------------------------------------------
+
 
 def test_immediate_negative_value():
     term = L2.Immediate(value=-7)
@@ -184,6 +196,7 @@ def test_immediate_zero():
 # ---------------------------------------------------------------------------
 # Primitive — all three operators
 # ---------------------------------------------------------------------------
+
 
 def test_primitive_sub():
     term = L2.Primitive(operator="-", left=L2.Reference(name="a"), right=L2.Reference(name="b"))
@@ -209,11 +222,16 @@ def test_primitive_non_reference_operands():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Immediate(
-        destination="t1", value=1,
+        destination="t1",
+        value=1,
         then=L1.Immediate(
-            destination="t2", value=2,
+            destination="t2",
+            value=2,
             then=L1.Primitive(
-                destination="t0", operator="+", left="t1", right="t2",
+                destination="t0",
+                operator="+",
+                left="t1",
+                right="t2",
                 then=L1.Halt(value="t0"),
             ),
         ),
@@ -223,6 +241,7 @@ def test_primitive_non_reference_operands():
 # ---------------------------------------------------------------------------
 # Let — empty bindings and multiple bindings
 # ---------------------------------------------------------------------------
+
 
 def test_let_empty_bindings():
     term = L2.Let(bindings=[], body=L2.Reference(name="x"))
@@ -244,11 +263,14 @@ def test_let_three_bindings():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Copy(
-        destination="a", source="x",
+        destination="a",
+        source="x",
         then=L1.Copy(
-            destination="b", source="y",
+            destination="b",
+            source="y",
             then=L1.Copy(
-                destination="c", source="z",
+                destination="c",
+                source="z",
                 then=L1.Halt(value="c"),
             ),
         ),
@@ -264,7 +286,8 @@ def test_let_non_reference_binding_value():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Immediate(
-        destination="t0", value=5,
+        destination="t0",
+        value=5,
         then=L1.Copy(destination="x", source="t0", then=L1.Halt(value="x")),
     )
 
@@ -272,6 +295,7 @@ def test_let_non_reference_binding_value():
 # ---------------------------------------------------------------------------
 # Abstract — multiple parameters
 # ---------------------------------------------------------------------------
+
 
 def test_abstract_no_parameters():
     term = L2.Abstract(parameters=[], body=L2.Immediate(value=0))
@@ -296,7 +320,10 @@ def test_abstract_multiple_parameters():
         destination="t0",
         parameters=["a", "b", "k0"],
         body=L1.Primitive(
-            destination="t1", operator="+", left="a", right="b",
+            destination="t1",
+            operator="+",
+            left="a",
+            right="b",
             then=L1.Apply(target="k0", arguments=["t1"]),
         ),
         then=L1.Halt(value="t0"),
@@ -306,6 +333,7 @@ def test_abstract_multiple_parameters():
 # ---------------------------------------------------------------------------
 # Apply — no arguments, multiple arguments
 # ---------------------------------------------------------------------------
+
 
 def test_apply_no_arguments():
     term = L2.Apply(target=L2.Reference(name="f"), arguments=[])
@@ -343,7 +371,8 @@ def test_apply_non_reference_target():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Immediate(
-        destination="t1", value=99,
+        destination="t1",
+        value=99,
         then=L1.Abstract(
             destination="k0",
             parameters=["t0"],
@@ -356,6 +385,7 @@ def test_apply_non_reference_target():
 # ---------------------------------------------------------------------------
 # Branch — lt operator, non-reference operands
 # ---------------------------------------------------------------------------
+
 
 def test_branch_lt_operator():
     term = L2.Branch(
@@ -372,7 +402,9 @@ def test_branch_lt_operator():
         parameters=["t0"],
         body=L1.Halt(value="t0"),
         then=L1.Branch(
-            operator="<", left="x", right="y",
+            operator="<",
+            left="x",
+            right="y",
             then=L1.Apply(target="j0", arguments=["a"]),
             otherwise=L1.Apply(target="j0", arguments=["b"]),
         ),
@@ -395,7 +427,9 @@ def test_branch_non_reference_consequent_and_otherwise():
         parameters=["t0"],
         body=L1.Halt(value="t0"),
         then=L1.Branch(
-            operator="==", left="x", right="y",
+            operator="==",
+            left="x",
+            right="y",
             then=L1.Immediate(destination="t1", value=1, then=L1.Apply(target="j0", arguments=["t1"])),
             otherwise=L1.Immediate(destination="t2", value=0, then=L1.Apply(target="j0", arguments=["t2"])),
         ),
@@ -405,6 +439,7 @@ def test_branch_non_reference_consequent_and_otherwise():
 # ---------------------------------------------------------------------------
 # Allocate — non-zero count
 # ---------------------------------------------------------------------------
+
 
 def test_allocate_nonzero():
     term = L2.Allocate(count=3)
@@ -416,6 +451,7 @@ def test_allocate_nonzero():
 # ---------------------------------------------------------------------------
 # Load — non-zero index, non-reference base
 # ---------------------------------------------------------------------------
+
 
 def test_load_nonzero_index():
     term = L2.Load(base=L2.Reference(name="arr"), index=2)
@@ -430,7 +466,8 @@ def test_load_non_reference_base():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Allocate(
-        destination="t1", count=1,
+        destination="t1",
+        count=1,
         then=L1.Load(destination="t0", base="t1", index=0, then=L1.Halt(value="t0")),
     )
 
@@ -439,6 +476,7 @@ def test_load_non_reference_base():
 # Store — non-reference base and value
 # ---------------------------------------------------------------------------
 
+
 def test_store_non_reference_value():
     # dummy=t0 allocated eagerly, then _terms evaluates base (Reference, no temp),
     # value (Immediate → t1), then Store uses t1, dummy t0 returned
@@ -446,9 +484,12 @@ def test_store_non_reference_value():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Immediate(
-        destination="t1", value=42,
+        destination="t1",
+        value=42,
         then=L1.Store(
-            base="x", index=1, value="t1",
+            base="x",
+            index=1,
+            value="t1",
             then=L1.Immediate(destination="t0", value=0, then=L1.Halt(value="t0")),
         ),
     )
@@ -459,7 +500,9 @@ def test_store_nonzero_index():
     fresh = make_fresh()
     result = cps_convert_term(term, k, fresh)
     assert result == L1.Store(
-        base="arr", index=3, value="v",
+        base="arr",
+        index=3,
+        value="v",
         then=L1.Immediate(destination="t0", value=0, then=L1.Halt(value="t0")),
     )
 
@@ -467,6 +510,7 @@ def test_store_nonzero_index():
 # ---------------------------------------------------------------------------
 # Begin — empty effects, multiple effects
 # ---------------------------------------------------------------------------
+
 
 def test_begin_no_effects():
     term = L2.Begin(effects=[], value=L2.Reference(name="x"))
@@ -497,7 +541,9 @@ def test_begin_effect_with_side_effect():
     result = cps_convert_term(term, k, fresh)
     # Store emits its code, dummy Immediate result is discarded, then value
     assert result == L1.Store(
-        base="x", index=0, value="v",
+        base="x",
+        index=0,
+        value="v",
         then=L1.Immediate(destination="t0", value=0, then=L1.Halt(value="x")),
     )
 
@@ -505,6 +551,7 @@ def test_begin_effect_with_side_effect():
 # ---------------------------------------------------------------------------
 # cps_convert_terms — empty list and multi-element list
 # ---------------------------------------------------------------------------
+
 
 def test_cps_convert_terms_empty():
     results = []
@@ -536,6 +583,7 @@ def test_cps_convert_terms_multiple():
 # cps_convert_program — multiple parameters
 # ---------------------------------------------------------------------------
 
+
 def test_cps_convert_program_no_parameters():
     program = L2.Program(parameters=[], body=L2.Immediate(value=0))
     fresh = make_fresh()
@@ -556,7 +604,10 @@ def test_cps_convert_program_multiple_parameters():
     assert result == L1.Program(
         parameters=["a", "b"],
         body=L1.Primitive(
-            destination="t0", operator="+", left="a", right="b",
+            destination="t0",
+            operator="+",
+            left="a",
+            right="b",
             then=L1.Halt(value="t0"),
         ),
     )
