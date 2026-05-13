@@ -22,7 +22,6 @@ from L3.syntax import (
     IsNil,
     Let,
     LetRec,
-    LessThan,
     LessThanOrEqual,
     ListLiteral,
     Load,
